@@ -631,6 +631,7 @@ private:
 struct BufferDeallocationPass
     : public bufferization::impl::BufferDeallocationBase<
           BufferDeallocationPass> {
+  BufferDeallocationPass(const DeallocChooser& needDeallocCB) : BufferDeallocationBase(), needDeallocCB(needDeallocCB) { };
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
     registry.insert<memref::MemRefDialect>();
@@ -641,22 +642,27 @@ struct BufferDeallocationPass
     if (func.isExternal())
       return;
 
-    if (failed(deallocateBuffers(func)))
+    if (failed(deallocateBuffers(func, needDeallocCB)))
       signalPassFailure();
   }
+private:
+  // Callback to filter operations user do not want to dealloc.
+  DeallocChooser needDeallocCB;
 };
 
 } // namespace
 
-LogicalResult bufferization::deallocateBuffers(Operation *op) {
+LogicalResult bufferization::deallocateBuffers(Operation *op, DeallocChooser needDeallocCB) {
   if (isa<ModuleOp>(op)) {
     WalkResult result = op->walk([&](func::FuncOp funcOp) {
-      if (failed(deallocateBuffers(funcOp)))
+      if (failed(deallocateBuffers(funcOp, needDeallocCB)))
         return WalkResult::interrupt();
       return WalkResult::advance();
     });
     return success(!result.wasInterrupted());
   }
+  if (!needDeallocCB(op))
+    return success();
 
   // Ensure that there are supported loops only.
   Backedges backedges(op);
@@ -688,6 +694,6 @@ LogicalResult bufferization::deallocateBuffers(Operation *op) {
 // BufferDeallocationPass construction
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<Pass> mlir::bufferization::createBufferDeallocationPass() {
-  return std::make_unique<BufferDeallocationPass>();
+std::unique_ptr<Pass> mlir::bufferization::createBufferDeallocationPass(BufferDeallocationOptions options) {
+  return std::make_unique<BufferDeallocationPass>(options.needDeallocCB);
 }

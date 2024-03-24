@@ -27,7 +27,8 @@ struct OneShotBufferizationOptions;
 
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
+std::unique_ptr<Pass> createBufferDeallocationPass(
+  BufferDeallocationOptions options = BufferDeallocationOptions());
 
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
@@ -132,7 +133,7 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
+LogicalResult deallocateBuffers(Operation *op, DeallocChooser needDeallocCB);
 
 /// Run the ownership-based buffer deallocation.
 LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,

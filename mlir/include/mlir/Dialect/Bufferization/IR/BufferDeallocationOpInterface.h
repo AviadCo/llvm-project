@@ -90,6 +90,14 @@ private:
   State state = State::Uninitialized;
 };
 
+using DeallocChooser = std::function<bool(Operation*)>;
+/// Options for BufferDeallocation pass.
+struct BufferDeallocationOptions {
+  // A pass option indicating whether the given operation produces buffer
+  // that need to be deallocated. 
+  DeallocChooser needDeallocCB = [] (Operation*) {return true;};
+};
+
 /// Options for BufferDeallocationOpInterface-based buffer deallocation.
 struct DeallocationOptions {
   // A pass option indicating whether private functions should be modified to
